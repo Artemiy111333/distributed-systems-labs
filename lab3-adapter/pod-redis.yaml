@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: adapter-example
+  labels:
+    app: adapter-example
+spec:
+  containers:
+    - name: redis
+      image: redis:7.4-alpine
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 6379
+    - name: adapter
+      image: oliver006/redis_exporter:v1.76.0
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: REDIS_ADDR
+          value: redis://localhost:6379
+      ports:
+        - containerPort: 9121

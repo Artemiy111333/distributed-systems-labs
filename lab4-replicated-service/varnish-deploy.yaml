@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: varnish-cache
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: varnish-cache
+  template:
+    metadata:
+      labels:
+        app: varnish-cache
+    spec:
+      containers:
+        - name: cache
+          image: varnish:stable
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: 2Gi
+          command:
+            - varnishd
+            - -F
+            - -f
+            - /etc/varnish-config/default.vcl
+            - -a
+            - 0.0.0.0:8080
+            - -s
+            - malloc,2G
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: varnish
+              mountPath: /etc/varnish-config
+      volumes:
+        - name: varnish
+          configMap:
+            name: varnish-config

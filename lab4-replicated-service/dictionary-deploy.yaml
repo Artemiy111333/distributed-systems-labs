@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dictionary-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dictionary-server
+  template:
+    metadata:
+      labels:
+        app: dictionary-server
+    spec:
+      containers:
+        - name: server
+          image: nginx:stable
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

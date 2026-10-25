@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: adapter-example
+spec:
+  selector:
+    app: adapter-example
+  ports:
+    - name: metrics
+      port: 9121
+      targetPort: 9121

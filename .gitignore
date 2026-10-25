@@ -1,0 +1,7 @@
+*.tar
+*.log
+*.key
+*.crt
+main
+.env
+.vscode/
