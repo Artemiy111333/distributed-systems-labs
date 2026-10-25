@@ -2,6 +2,9 @@
 *.log
 *.key
 *.crt
-main
+*.pem
 .env
+.env.*
 .vscode/
+.DS_Store
+main

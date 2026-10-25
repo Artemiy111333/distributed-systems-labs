@@ -1,12 +1,20 @@
-# Лабораторная №4 — Replicated Service
+# Лабораторная работа №4. Реплицированные сервисы с распределением нагрузки
 
-Три этапа методички: 3 nginx-replica → Service, 2 Varnish-cache → Service, 4 nginx с TLS → Service.
+## Цель работы
 
-## I. Приложение и Service
+Развёртывание реплицированного HTTP-сервиса в Kubernetes с балансировкой запросов, промежуточным кэширующим слоем Varnish и отдельным TLS-шлюзом Nginx.
+
+## Архитектура
+
+Сервис состоит из трёх слоёв:
+
+1. `dictionary-server`: три реплики Nginx, доступные через Kubernetes Service `dictionary-server-service`.
+2. `varnish-cache`: две реплики Varnish с backend `dictionary-server-service:80`, доступные через `varnish-service`.
+3. `nginx-ssl`: четыре реплики Nginx, принимающие HTTPS на порту 443 и передающие запросы в `varnish-service`.
+
+## Часть I. Реплицированный HTTP-сервис
 
 ```bash
-# Сделайте скриншоты лабораторной №3, затем удалите кластер adapter
-kind delete cluster --name adapter
 kind create cluster --name replica --wait 120s
 kubectl config use-context kind-replica
 docker pull nginx:stable
@@ -16,14 +24,22 @@ kubectl apply -f dictionary-deploy.yaml
 kubectl apply -f dictionary-service.yaml
 kubectl rollout status deployment/dictionary-server --timeout=180s
 kubectl get pods
-kubectl get svc
-# Сохраните 01-replicas.png и 02-services.png
+kubectl get services
+```
+
+Проброс порта сервиса:
+
+```bash
 kubectl port-forward svc/dictionary-server-service 8081:80
 ```
 
-В другом терминале: `curl http://localhost:8081/` (страница nginx). Остановите `port-forward`.
+Проверка HTTP из другого терминала:
 
-## II. Varnish
+```bash
+curl http://localhost:8081/
+```
+
+## Часть II. Кэширующий слой Varnish
 
 ```bash
 kubectl create configmap varnish-config --from-file=default.vcl --dry-run=client -o yaml | kubectl apply -f -
@@ -34,14 +50,20 @@ kubectl get pods
 kubectl port-forward svc/varnish-service 8080:80
 ```
 
-В другом терминале: `curl -I http://localhost:8080/` и `curl http://localhost:8080/`. Сделайте `03-varnish.png`.
-
-Если `Pending` из-за нехватки памяти, уменьшите **оба** значения в `varnish-deploy.yaml` с `2Gi`/`malloc,2G` до `256Mi`/`malloc,256M`; это отступление от примера методички необходимо отметить в отчёте.
-
-## III. HTTPS
+Проверка HTTP в отдельном терминале:
 
 ```bash
-# Убедитесь, что предыдущий port-forward закрыт
+curl -I http://localhost:8080/
+curl http://localhost:8080/
+```
+
+Для каждой реплики Varnish в манифесте установлено требование `memory: 2Gi`, а размер кэша задан параметром `malloc,2G`.
+
+## Часть III. TLS-шлюз Nginx
+
+Для локальной проверки применяется самоподписанный сертификат с именем `localhost`. В production-среде такой сертификат не используется.
+
+```bash
 openssl req -x509 -nodes -newkey rsa:2048 -days 365 -keyout server.key -out server.crt -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'
 kubectl create secret tls ssl --cert=server.crt --key=server.key
 kubectl create configmap nginx-conf --from-file=nginx.conf --dry-run=client -o yaml | kubectl apply -f -
@@ -49,12 +71,15 @@ kubectl apply -f nginx-deploy.yaml
 kubectl apply -f nginx-service.yaml
 kubectl rollout status deployment/nginx-ssl --timeout=180s
 kubectl get pods
-kubectl get svc
+kubectl get services
 kubectl port-forward svc/nginx-service 8443:443
 ```
 
-В другом терминале: `curl -k https://localhost:8443/` и `curl -k -I https://localhost:8443/`. Сделайте `04-https.png`.
+Проверка HTTPS из отдельного терминала:
 
-Браузер может предупреждать о самоподписанном сертификате. В KIND для `type: LoadBalancer` обычно сохраняется `EXTERNAL-IP: <pending>` — для лабораторной используется port-forward.
+```bash
+curl -k https://localhost:8443/
+curl -k -I https://localhost:8443/
+```
 
-**Важно:** `server.key` и `server.crt` не публиковать на GitHub. Из папки GitHub исключаются правилами `.gitignore`.
+Сервис `nginx-service` имеет тип `LoadBalancer`. В локальном кластере KIND без отдельной реализации внешнего балансировщика значение `EXTERNAL-IP` может оставаться `pending`. Для обращения к сервису используется `kubectl port-forward`.

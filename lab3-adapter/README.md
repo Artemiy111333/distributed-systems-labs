@@ -1,13 +1,18 @@
-# Лабораторная №3 — Adapter + Prometheus
+# Лабораторная работа №3. Паттерн Adapter
 
-Основа: лабораторная методичка (Adapter Redis Exporter -> Prometheus).
+## Цель работы
+
+Исследование экспорта метрик Redis в формате Prometheus с использованием дополнительного контейнера Redis Exporter.
+
+## Архитектура
+
+Pod `adapter-example` содержит Redis и Redis Exporter. Контейнеры Pod используют общее сетевое пространство, поэтому экспортер подключается к Redis по адресу `redis://localhost:6379` и публикует метрики на порту 9121. Prometheus обращается к сервису `adapter-example:9121`, а собственные метрики получает через `localhost:9090`.
+
+## Развёртывание
 
 ```bash
-# Сначала сохраните скриншоты лабораторной №2
-kind delete cluster --name redis
 kind create cluster --name adapter --wait 120s
 kubectl config use-context kind-adapter
-
 docker pull prom/prometheus:v3.8.0
 docker pull redis:7.4-alpine
 docker pull oliver006/redis_exporter:v1.76.0
@@ -17,24 +22,39 @@ kubectl apply -f prometheus.yaml
 kubectl apply -f pod-redis.yaml
 kubectl apply -f service-redis.yaml
 kubectl rollout status deployment/prometheus --timeout=180s
-kubectl get pods
-# Сделайте 01-pods.png
 ```
 
-Проверка метрик:
+## Проверка Pod и Service
+
+```bash
+kubectl get pods
+kubectl get services
+kubectl logs adapter-example -c adapter
+```
+
+Метрики доступны при пробросе порта:
 
 ```bash
 kubectl port-forward svc/adapter-example 9121:9121
 ```
 
-В другом терминале: `curl -s http://localhost:9121/metrics | grep '^redis_up'`. Ожидается `redis_up 1`. Скриншот `02-metrics.png`.
+Запрос из отдельного терминала:
 
-Остановите предыдущий `port-forward` (`Ctrl+C`) и запустите:
+```bash
+curl -s http://localhost:9121/metrics | grep '^redis_up'
+```
+
+Значение `redis_up 1` означает успешное подключение экспортера к Redis.
+
+## Проверка Prometheus
 
 ```bash
 kubectl port-forward deployment/prometheus 9090:9090
 ```
 
-В браузере **в Ubuntu** откройте `http://localhost:9090/targets` → `Status / Target health`: два Target `prometheus`, `redis` в состоянии `UP`. Скриншот `03-targets-up.png`.
+Адрес интерфейса: `http://localhost:9090/targets`. В разделе `Status → Target health` контролируются две цели: `prometheus` и `redis`. Состояние `UP` означает успешный опрос соответствующей цели.
 
-Если `DOWN`: `kubectl logs adapter-example -c adapter`, `kubectl get svc`, `kubectl logs deployment/prometheus`, проверить ответ `/metrics`.
+## Используемые компоненты
+
+- Prometheus: https://prometheus.io/
+- Redis Exporter: https://github.com/oliver006/redis_exporter
