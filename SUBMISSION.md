@@ -1,7 +1,3 @@
-# Что сдавать преподавателю
-
-На каждую лабораторную прикладывайте ссылку на папку в публичном GitHub-репозитории и доказательные PNG-скриншоты. Не выдавайте подготовленные манифесты за проверенное развёртывание: результат фиксируется после реального запуска в Ubuntu.
-
 ## №1 Sidecar
 - `screenshots/01-topz-result.png`: в одном кадре `docker ps` (два контейнера `Up`) и `curl http://localhost:8080/topz` (процессы `tail` и `/server`). Уже показанный в переписке результат успешно проверен, нужно сохранить PNG.
 
@@ -20,5 +16,3 @@
 - `screenshots/02-services.png`: `kubectl get svc` и доступность основного сервиса.
 - `screenshots/03-varnish.png`: два varnish-cache Pod `Running`, `curl -I http://localhost:8080/` через Varnish.
 - `screenshots/04-https.png`: четыре nginx-ssl Pod `Running` и `curl -k https://localhost:8443/` с ответом nginx.
-
-Не загружайте персональные токены GitHub, приватные TLS-ключи, пароли и данные из `.env`.
