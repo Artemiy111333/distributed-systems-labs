@@ -13,10 +13,11 @@ Pod `adapter-example` содержит Redis и Redis Exporter. Контейне
 ```bash
 kind create cluster --name adapter --wait 120s
 kubectl config use-context kind-adapter
-docker pull prom/prometheus:v3.8.0
-docker pull redis:7.4-alpine
-docker pull oliver006/redis_exporter:v1.76.0
-kind load docker-image prom/prometheus:v3.8.0 redis:7.4-alpine oliver006/redis_exporter:v1.76.0 --name adapter
+docker pull --platform linux/amd64 prom/prometheus:v3.8.0
+docker pull --platform linux/amd64 redis:7.4-alpine
+docker pull --platform linux/amd64 oliver006/redis_exporter:v1.76.0
+docker image save --platform linux/amd64 --output /tmp/adapter-images.tar prom/prometheus:v3.8.0 redis:7.4-alpine oliver006/redis_exporter:v1.76.0
+kind load image-archive /tmp/adapter-images.tar --name adapter
 kubectl apply -f prometheus-config.yaml
 kubectl apply -f prometheus.yaml
 kubectl apply -f pod-redis.yaml
@@ -58,3 +59,9 @@ kubectl port-forward deployment/prometheus 9090:9090
 
 - Prometheus: https://prometheus.io/
 - Redis Exporter: https://github.com/oliver006/redis_exporter
+
+## Результаты выполнения
+
+Pod `adapter-example` запущен с двумя готовыми контейнерами (`2/2 Running`), Pod Prometheus — `1/1 Running`. Метрика `redis_up` равна `1`. В интерфейсе Prometheus обе цели `prometheus` и `redis` имеют состояние `UP`.
+
+Подтверждающие материалы: [состояние Pod и Service](screenshots/01-pods-services.png), [метрики Redis](screenshots/02-redis-metrics.png), [Prometheus Target health](screenshots/03-prometheus-targets.png).

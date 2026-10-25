@@ -17,9 +17,10 @@
 ```bash
 kind create cluster --name replica --wait 120s
 kubectl config use-context kind-replica
-docker pull nginx:stable
-docker pull varnish:stable
-kind load docker-image nginx:stable varnish:stable --name replica
+docker pull --platform linux/amd64 nginx:stable
+docker pull --platform linux/amd64 varnish:stable
+docker image save --platform linux/amd64 --output /tmp/replica-images.tar nginx:stable varnish:stable
+kind load image-archive /tmp/replica-images.tar --name replica
 kubectl apply -f dictionary-deploy.yaml
 kubectl apply -f dictionary-service.yaml
 kubectl rollout status deployment/dictionary-server --timeout=180s
@@ -83,3 +84,9 @@ curl -k -I https://localhost:8443/
 ```
 
 Сервис `nginx-service` имеет тип `LoadBalancer`. В локальном кластере KIND без отдельной реализации внешнего балансировщика значение `EXTERNAL-IP` может оставаться `pending`. Для обращения к сервису используется `kubectl port-forward`.
+
+## Результаты выполнения
+
+Работают три Pod `dictionary-server`, два Pod `varnish-cache` и четыре Pod `nginx-ssl` — все в состоянии `1/1 Running`. HTTP-запрос через Varnish возвращает `200 OK` и заголовок `Via: 1.1 varnish`. Проверка конфигурации SSL-шлюза (`nginx -t`) прошла успешно; HTTPS-запрос через порт 8443 возвращает `HTTP/1.1 200 OK` и страницу Nginx.
+
+Подтверждающие материалы: [реплики Nginx](screenshots/01-nginx-replicas.png), [слой Varnish](screenshots/02-varnish-cache.png), [HTTPS-шлюз](screenshots/03-nginx-https.png).

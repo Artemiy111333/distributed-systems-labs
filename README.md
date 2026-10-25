@@ -26,3 +26,12 @@
 - Проект Topz: https://github.com/brendandburns/topz
 - Документация Kubernetes: https://kubernetes.io/docs/
 - Документация Docker: https://docs.docker.com/
+
+## Результаты выполнения
+
+| Работа | Итог проверки | Материалы |
+|---|---|---|
+| №1 Sidecar | Два Docker-контейнера; `/topz` показывает процессы | [Скриншоты](lab1-sidecar/screenshots/) |
+| №2 Ambassador | Три Redis, Twemproxy (`SET`/`GET`), HTTP-маршрутизация через Nginx | [Скриншоты](lab2-ambassador/screenshots/) |
+| №3 Adapter | Метрика `redis_up 1`; оба Target Prometheus в состоянии `UP` | [Скриншоты](lab3-adapter/screenshots/) |
+| №4 Replicated Service | Девять работающих Pod; Varnish и HTTPS возвращают `200 OK` | [Скриншоты](lab4-replicated-service/screenshots/) |

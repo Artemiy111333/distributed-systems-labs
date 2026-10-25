@@ -13,14 +13,16 @@
 ```bash
 kind create cluster --name redis --wait 120s
 kubectl config use-context kind-redis
-docker pull redis:7
-kind load docker-image redis:7 --name redis
+docker pull --platform linux/amd64 redis:7
+docker image save --platform linux/amd64 --output /tmp/redis-amd64.tar redis:7
+kind load image-archive /tmp/redis-amd64.tar --name redis
 kubectl apply -f redis-service.yaml
 kubectl apply -f redis-shards.yaml
 kubectl rollout status statefulset/sharded-redis --timeout=180s
 
-docker pull anchorfree/twemproxy:latest
-kind load docker-image anchorfree/twemproxy:latest --name redis
+docker pull --platform linux/amd64 anchorfree/twemproxy:latest
+docker image save --platform linux/amd64 --output /tmp/twemproxy-amd64.tar anchorfree/twemproxy:latest
+kind load image-archive /tmp/twemproxy-amd64.tar --name redis
 kubectl create configmap twem-config --from-file=nutcracker.yaml --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f twemproxy-ambassador-pod.yaml
 ```
@@ -43,8 +45,9 @@ kubectl logs ambassador-example
 ### Развёртывание
 
 ```bash
-docker pull nginx:stable
-kind load docker-image nginx:stable --name redis
+docker pull --platform linux/amd64 nginx:stable
+docker image save --platform linux/amd64 --output /tmp/nginx-amd64.tar nginx:stable
+kind load image-archive /tmp/nginx-amd64.tar --name redis
 kubectl apply -f experiment-backends.yaml
 kubectl rollout status deployment/web --timeout=180s
 kubectl rollout status deployment/experiment --timeout=180s
@@ -71,3 +74,9 @@ curl http://localhost:8082/
 ## Исходные материалы
 
 https://github.com/brendandburns/designing-distributed-systems/tree/master/ambassadors
+
+## Результаты выполнения
+
+Развёрнуты три экземпляра Redis, headless Service и Pod `ambassador-example` с Twemproxy. Команды `SET` и `GET` через порт 6380 выполнены успешно. Дополнительно созданы сервисы `web` и `experiment`, Nginx Ambassador запущен, проверка `nginx -t` прошла успешно. HTTP-запрос через Ambassador вернул `PRODUCTION`. Настройка весов 9:1 выполнена; статистическое распределение запросов между различными клиентскими IP отдельно не измерялось.
+
+Подтверждающие материалы: [запуск Redis](screenshots/02-redis-replicas.png), [Twemproxy](screenshots/03-ambassador-ready.png), [SET/GET](screenshots/04-twemproxy-set-get.png), [backend-сервисы](screenshots/05-experiment-backends.png), [Nginx Ambassador](screenshots/06-experiment-ambassador.png).
